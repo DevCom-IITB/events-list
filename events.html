@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>InstiApp Events</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    :root {
+      --primary-color: #4a6eb5;
+      --secondary-color: #f8f9fa;
+      --text-color: #333;
+      --border-color: #dee2e6;
+      --hover-color: #e9ecef;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      padding: 20px;
+      color: var(--text-color);
+      background-color: #f5f7f9;
+      line-height: 1.6;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 15px;
+    }
+    
+    header {
+      text-align: center;
+      margin-bottom: 30px;
+      padding: 20px 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    h1 {
+      color: var(--primary-color);
+      margin-bottom: 10px;
+    }
+    
+    .table-container {
+      overflow-x: auto;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+      background-color: white;
+    }
+    
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      min-width: 800px;
+    }
+    
+    th, td {
+      border: 1px solid var(--border-color);
+      padding: 12px 15px;
+    }
+    
+    th {
+      background-color: var(--primary-color);
+      color: white;
+      text-align: left;
+      position: sticky;
+      top: 0;
+    }
+    
+    tr:nth-child(even) {
+      background-color: var(--secondary-color);
+    }
+    
+    tr:hover {
+      background-color: var(--hover-color);
+    }
+    
+    .sort-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      margin-left: 5px;
+      font-size: 14px;
+      color: white;
+    }
+    
+    .sort-btn:hover {
+      color: #ffcc00;
+    }
+    
+    a {
+      color: var(--primary-color);
+      text-decoration: none;
+    }
+    
+    a:hover {
+      text-decoration: underline;
+    }
+    
+    .loading-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100px;
+      margin: 20px 0;
+    }
+    
+    .spinner {
+      border: 4px solid rgba(0, 0, 0, 0.1);
+      border-left: 4px solid var(--primary-color);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .footer {
+      text-align: center;
+      margin-top: 30px;
+      padding: 20px;
+      font-size: 14px;
+      color: #666;
+      border-top: 1px solid var(--border-color);
+    }
+    
+    @media screen and (max-width: 768px) {
+      body {
+        padding: 10px;
+      }
+      
+      h1 {
+        font-size: 1.8rem;
+      }
+      
+      th, td {
+        padding: 8px;
+      }
+    }
+    .description-column {
+      max-width: 250px;
+      width: 250px;
+      cursor: pointer;
+    }
+
+    .description-column p {
+      white-space: normal;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      text-overflow: ellipsis;
+      overflow: hidden;
+      max-height: 100px;
+      display: -webkit-box;
+      -webkit-line-clamp: 4;
+      -webkit-box-orient: vertical;
+    }
+    
+    /* Modal styles for description popup */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 100;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.7);
+      overflow: auto;
+    }
+    
+    .modal-content {
+      background-color: #fff;
+      margin: 10% auto;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      width: 80%;
+      max-width: 600px;
+      position: relative;
+    }
+    
+    .close-btn {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      font-size: 24px;
+      font-weight: bold;
+      color: #666;
+      cursor: pointer;
+    }
+    
+    .close-btn:hover {
+      color: #333;
+    }
+    
+    .modal-title {
+      margin-bottom: 15px;
+      color: var(--primary-color);
+      padding-right: 20px;
+    }
+    
+    .modal-body {
+      max-height: 70vh;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>InstiApp Events</h1>
+      <p>Browse all events on campus</p>
+    </header>
+    
+    <div id="loading" class="loading-container">
+      <div class="spinner"></div>
+    </div>
+    
+    <div class="table-container">
+      <table id="eventsTable">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th class="description-column">Description</th>
+            <th>Start Time <button class="sort-btn" id="sortStartTime"><i class="fas fa-sort"></i></button></th>
+            <th>End Time <button class="sort-btn" id="sortEndTime"><i class="fas fa-sort"></i></button></th>
+            <th>Bodies</th>
+            <th>Venues</th>
+            <th>Website URL</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    
+    <div class="footer">
+      &copy; 2025 InstiApp Events Explorer
+    </div>
+  </div>
+
+  <script>
+    // Store events data globally for sorting
+    let eventsData = [];
+    let sortDirection = {
+      startTime: 'asc',
+      endTime: 'asc'
+    };
+
+    // Function to render the table
+    // Update your renderTable function to make descriptions clickable
+function renderTable(events) {
+  const tableBody = document.querySelector("#eventsTable tbody");
+  tableBody.innerHTML = ''; // Clear existing rows
+
+  events.forEach(event => {
+    const row = document.createElement("tr");
+
+    // Extract body names
+    const bodyNames = event.bodies.map(body => body.name).join(', ');
+    
+    // Extract venue names
+    const venueNames = event.venues.map(venue => venue.name).join(', ');
+
+    row.innerHTML = `
+      <td>${event.name}</td>
+      <td class="description-column" data-description="${escapeHtml(event.description)}"><p>${event.description}</p></td>
+      <td>${new Date(event.start_time).toLocaleString()}</td>
+      <td>${new Date(event.end_time).toLocaleString()}</td>
+      <td>${bodyNames}</td>
+      <td>${venueNames}</td>
+      <td>${event.website_url ? `<a href="${event.website_url}" target="_blank">${event.website_url}</a>` : '-'}</td>
+    `;
+
+    tableBody.appendChild(row);
+  });
+  
+  // Add click event listeners to description cells
+  document.querySelectorAll('.description-column').forEach(cell => {
+    cell.addEventListener('click', function() {
+      const description = this.getAttribute('data-description');
+      showDescriptionModal(description, event.name);
+    });
+  });
+  
+  // Hide loading spinner after rendering
+  document.getElementById('loading').style.display = 'none';
+}
+
+// Helper function to escape HTML special characters
+function escapeHtml(unsafe) {
+  return unsafe
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+// Function to show the description modal
+function showDescriptionModal(description, eventName) {
+  const modal = document.getElementById('descriptionModal');
+  const modalContent = document.getElementById('modalDescription');
+  
+  modalContent.innerHTML = description;
+  
+  // Show the modal
+  modal.style.display = 'block';
+  
+  // Close modal when clicking the X
+  document.querySelector('.close-btn').addEventListener('click', function() {
+    modal.style.display = 'none';
+  });
+  
+  // Close modal when clicking outside the modal content
+  window.addEventListener('click', function(event) {
+    if (event.target === modal) {
+      modal.style.display = 'none';
+    }
+  });
+}
+
+    // Show loading spinner
+    document.getElementById('loading').style.display = 'flex';
+
+    // Fetch events data
+    fetch('https://gymkhana.iitb.ac.in/instiapp/api/events-all')
+      .then(response => response.json())
+      .then(data => {
+        eventsData = data.data;
+        renderTable(eventsData);
+        
+        // Add event listeners for sorting
+        document.getElementById('sortStartTime').addEventListener('click', () => {
+          sortEvents('startTime');
+        });
+        
+        document.getElementById('sortEndTime').addEventListener('click', () => {
+          sortEvents('endTime');
+        });
+      })
+      .catch(error => {
+        console.error("Error fetching events:", error);
+        document.getElementById('loading').innerHTML = '<p>Error loading events. Please try again later.</p>';
+      });
+  </script>
+  <div id="descriptionModal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn">&times;</span>
+      <h3 class="modal-title">Event Description</h3>
+      <div id="modalDescription" class="modal-body"></div>
+    </div>
+  </div>
+</body>
+</html>
