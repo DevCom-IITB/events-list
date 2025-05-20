@@ -212,6 +212,81 @@
       max-height: 70vh;
       overflow-y: auto;
     }
+
+    /* Filter styles */
+    .filter-container {
+      background-color: white;
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .filter-container h3 {
+      margin-bottom: 15px;
+      color: var(--primary-color);
+    }
+
+    .filter-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .filter-select {
+      padding: 8px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      background-color: white;
+      font-family: inherit;
+    }
+
+    .search-container {
+      display: flex;
+      margin-bottom: 15px;
+    }
+
+    .search-input {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      font-family: inherit;
+    }
+
+    .search-input::placeholder {
+      color: #999;
+    }
+
+    .reset-btn {
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: auto;
+      align-self: flex-end;
+    }
+
+    .reset-btn:hover {
+      background-color: #3a5795;
+    }
+
+    @media screen and (max-width: 768px) {
+      .filter-group {
+        min-width: 100%;
+      }
+    }
   </style>
 </head>
 <body>
@@ -220,6 +295,30 @@
       <h1>InstiApp Events</h1>
       <p>Browse all events on campus</p>
     </header>
+    
+    <div class="filter-container">
+      <h3>Filter Events</h3>
+      
+      <div class="search-container">
+        <input type="text" id="searchInput" class="search-input" placeholder="Search events by name...">
+      </div>
+      
+      <div class="filter-row">
+        <div class="filter-group">
+          <label for="venueFilter">Venue:</label>
+          <select id="venueFilter" class="filter-select">
+            <option value="">All Venues</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="bodyFilter">Organizing Body:</label>
+          <select id="bodyFilter" class="filter-select">
+            <option value="">All Bodies</option>
+          </select>
+        </div>
+        <button id="resetFilters" class="reset-btn">Reset Filters</button>
+      </div>
+    </div>
     
     <div id="loading" class="loading-container">
       <div class="spinner"></div>
@@ -247,6 +346,14 @@
     </div>
   </div>
 
+  <div id="descriptionModal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn">&times;</span>
+      <h3 class="modal-title">Event Description</h3>
+      <div id="modalDescription" class="modal-body"></div>
+    </div>
+  </div>
+
   <script>
     // Store events data globally for sorting
     let eventsData = [];
@@ -256,77 +363,196 @@
     };
 
     // Function to render the table
-    // Update your renderTable function to make descriptions clickable
-function renderTable(events) {
-  const tableBody = document.querySelector("#eventsTable tbody");
-  tableBody.innerHTML = ''; // Clear existing rows
+    function renderTable(events) {
+      const tableBody = document.querySelector("#eventsTable tbody");
+      tableBody.innerHTML = ''; // Clear existing rows
 
-  events.forEach(event => {
-    const row = document.createElement("tr");
+      if (events.length === 0) {
+        const row = document.createElement("tr");
+        row.innerHTML = `<td colspan="7" style="text-align: center;">No events match your search criteria</td>`;
+        tableBody.appendChild(row);
+      } else {
+        events.forEach(event => {
+          const row = document.createElement("tr");
 
-    // Extract body names
-    const bodyNames = event.bodies.map(body => body.name).join(', ');
-    
-    // Extract venue names
-    const venueNames = event.venues.map(venue => venue.name).join(', ');
+          // Extract body names
+          const bodyNames = event.bodies.map(body => body.name).join(', ');
+          
+          // Extract venue names
+          const venueNames = event.venues.map(venue => venue.name).join(', ');
 
-    row.innerHTML = `
-      <td>${event.name}</td>
-      <td class="description-column" data-description="${escapeHtml(event.description)}"><p>${event.description}</p></td>
-      <td>${new Date(event.start_time).toLocaleString()}</td>
-      <td>${new Date(event.end_time).toLocaleString()}</td>
-      <td>${bodyNames}</td>
-      <td>${venueNames}</td>
-      <td>${event.website_url ? `<a href="${event.website_url}" target="_blank">${event.website_url}</a>` : '-'}</td>
-    `;
+          row.innerHTML = `
+            <td>${event.name}</td>
+            <td class="description-column" data-description="${escapeHtml(event.description)}" data-event-name="${escapeHtml(event.name)}"><p>${event.description}</p></td>
+            <td>${new Date(event.start_time).toLocaleString()}</td>
+            <td>${new Date(event.end_time).toLocaleString()}</td>
+            <td>${bodyNames}</td>
+            <td>${venueNames}</td>
+            <td>${event.website_url ? `<a href="${event.website_url}" target="_blank">${event.website_url}</a>` : '-'}</td>
+          `;
 
-    tableBody.appendChild(row);
-  });
-  
-  // Add click event listeners to description cells
-  document.querySelectorAll('.description-column').forEach(cell => {
-    cell.addEventListener('click', function() {
-      const description = this.getAttribute('data-description');
-      showDescriptionModal(description, event.name);
-    });
-  });
-  
-  // Hide loading spinner after rendering
-  document.getElementById('loading').style.display = 'none';
-}
-
-// Helper function to escape HTML special characters
-function escapeHtml(unsafe) {
-  return unsafe
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
-// Function to show the description modal
-function showDescriptionModal(description, eventName) {
-  const modal = document.getElementById('descriptionModal');
-  const modalContent = document.getElementById('modalDescription');
-  
-  modalContent.innerHTML = description;
-  
-  // Show the modal
-  modal.style.display = 'block';
-  
-  // Close modal when clicking the X
-  document.querySelector('.close-btn').addEventListener('click', function() {
-    modal.style.display = 'none';
-  });
-  
-  // Close modal when clicking outside the modal content
-  window.addEventListener('click', function(event) {
-    if (event.target === modal) {
-      modal.style.display = 'none';
+          tableBody.appendChild(row);
+        });
+      }
+      
+      // Add click event listeners to description cells
+      document.querySelectorAll('.description-column').forEach(cell => {
+        cell.addEventListener('click', function() {
+          const description = this.getAttribute('data-description');
+          const eventName = this.getAttribute('data-event-name');
+          showDescriptionModal(description, eventName);
+        });
+      });
+      
+      // Hide loading spinner after rendering
+      document.getElementById('loading').style.display = 'none';
     }
-  });
-}
+
+    // Helper function to escape HTML special characters
+    function escapeHtml(unsafe) {
+      return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    // Function to show the description modal
+    function showDescriptionModal(description, eventName) {
+      const modal = document.getElementById('descriptionModal');
+      const modalContent = document.getElementById('modalDescription');
+      const modalTitle = document.querySelector('.modal-title');
+      
+      modalTitle.textContent = eventName || "Event Description";
+      modalContent.innerHTML = description;
+      
+      // Show the modal
+      modal.style.display = 'block';
+      
+      // Close modal when clicking the X
+      document.querySelector('.close-btn').addEventListener('click', function() {
+        modal.style.display = 'none';
+      });
+      
+      // Close modal when clicking outside the modal content
+      window.addEventListener('click', function(event) {
+        if (event.target === modal) {
+          modal.style.display = 'none';
+        }
+      });
+    }
+
+    // Function to sort events by start or end time
+    function sortEvents(field) {
+      // Toggle sort direction
+      sortDirection[field] = sortDirection[field] === 'asc' ? 'desc' : 'asc';
+      
+      // Update the icon to show current sort direction
+      const sortIcon = document.getElementById(`sort${field.charAt(0).toUpperCase() + field.slice(1)}`).querySelector('i');
+      sortIcon.className = sortDirection[field] === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
+      
+      // Sort the events array
+      eventsData.sort((a, b) => {
+        const dateA = new Date(field === 'startTime' ? a.start_time : a.end_time);
+        const dateB = new Date(field === 'startTime' ? b.start_time : b.end_time);
+        
+        return sortDirection[field] === 'asc' 
+          ? dateA - dateB 
+          : dateB - dateA;
+      });
+      
+      // Rerender with sorted data
+      renderTable(applyFilters());
+    }
+
+    // Populate filter dropdowns
+    function populateFilters(events) {
+      const venueFilter = document.getElementById('venueFilter');
+      const bodyFilter = document.getElementById('bodyFilter');
+      
+      // Get unique venues
+      const venues = new Set();
+      events.forEach(event => {
+        event.venues.forEach(venue => {
+          venues.add(venue.name);
+        });
+      });
+      
+      // Get unique bodies
+      const bodies = new Set();
+      events.forEach(event => {
+        event.bodies.forEach(body => {
+          bodies.add(body.name);
+        });
+      });
+      
+      // Add venue options
+      Array.from(venues).sort().forEach(venue => {
+        const option = document.createElement('option');
+        option.value = venue;
+        option.textContent = venue;
+        venueFilter.appendChild(option);
+      });
+      
+      // Add body options
+      Array.from(bodies).sort().forEach(body => {
+        const option = document.createElement('option');
+        option.value = body;
+        option.textContent = body;
+        bodyFilter.appendChild(option);
+      });
+    }
+
+    // Apply filters to events data
+    function applyFilters() {
+      const venueFilter = document.getElementById('venueFilter').value;
+      const bodyFilter = document.getElementById('bodyFilter').value;
+      const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+      
+      return eventsData.filter(event => {
+        // Check if event matches venue filter
+        const matchesVenue = !venueFilter || 
+          event.venues.some(venue => venue.name === venueFilter);
+        
+        // Check if event matches body filter
+        const matchesBody = !bodyFilter || 
+          event.bodies.some(body => body.name === bodyFilter);
+        
+        // Check if event matches search term
+        const matchesSearch = !searchTerm || 
+          event.name.toLowerCase().includes(searchTerm);
+        
+        return matchesVenue && matchesBody && matchesSearch;
+      });
+    }
+
+    // Handle filter changes
+    function setupFilterListeners() {
+      const venueFilter = document.getElementById('venueFilter');
+      const bodyFilter = document.getElementById('bodyFilter');
+      const searchInput = document.getElementById('searchInput');
+      const resetButton = document.getElementById('resetFilters');
+      
+      venueFilter.addEventListener('change', () => {
+        renderTable(applyFilters());
+      });
+      
+      bodyFilter.addEventListener('change', () => {
+        renderTable(applyFilters());
+      });
+      
+      searchInput.addEventListener('input', () => {
+        renderTable(applyFilters());
+      });
+      
+      resetButton.addEventListener('click', () => {
+        venueFilter.value = '';
+        bodyFilter.value = '';
+        searchInput.value = '';
+        renderTable(eventsData);
+      });
+    }
 
     // Show loading spinner
     document.getElementById('loading').style.display = 'flex';
@@ -336,6 +562,14 @@ function showDescriptionModal(description, eventName) {
       .then(response => response.json())
       .then(data => {
         eventsData = data.data;
+        
+        // Populate filter options
+        populateFilters(eventsData);
+        
+        // Set up filter listeners
+        setupFilterListeners();
+        
+        // Render the table
         renderTable(eventsData);
         
         // Add event listeners for sorting
@@ -352,12 +586,5 @@ function showDescriptionModal(description, eventName) {
         document.getElementById('loading').innerHTML = '<p>Error loading events. Please try again later.</p>';
       });
   </script>
-  <div id="descriptionModal" class="modal">
-    <div class="modal-content">
-      <span class="close-btn">&times;</span>
-      <h3 class="modal-title">Event Description</h3>
-      <div id="modalDescription" class="modal-body"></div>
-    </div>
-  </div>
 </body>
 </html>
