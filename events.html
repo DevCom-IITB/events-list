@@ -133,19 +133,6 @@
       border-top: 1px solid var(--border-color);
     }
     
-    @media screen and (max-width: 768px) {
-      body {
-        padding: 10px;
-      }
-      
-      h1 {
-        font-size: 1.8rem;
-      }
-      
-      th, td {
-        padding: 8px;
-      }
-    }
     .description-column {
       max-width: 250px;
       width: 250px;
@@ -282,9 +269,133 @@
       background-color: #3a5795;
     }
 
+    /* Date filter styles - Fixed alignment */
+    .date-filter-row {
+      margin-bottom: 15px;
+      display: flex;
+      align-items: flex-end; /* Align items at the bottom */
+      gap: 15px;
+    }
+
+    .date-input {
+      padding: 8px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      background-color: white;
+      font-family: inherit;
+      width: 100%;
+    }
+
+    .today-btn {
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      height: 38px; /* Match height with date input */
+    }
+
+    .today-btn:hover {
+      background-color: #3a5795;
+    }
+    
+    /* Event details modal for mobile view */
+    .event-details-modal .modal-content {
+      padding: 15px;
+      margin: 5% auto;
+    }
+    
+    .event-details-modal .modal-body {
+      margin-top: 10px;
+    }
+    
+    .event-details-modal .detail-row {
+      margin-bottom: 12px;
+    }
+    
+    .event-details-modal .detail-label {
+      font-weight: bold;
+      color: var(--primary-color);
+      margin-bottom: 3px;
+    }
+    
+    .event-details-modal .detail-value {
+      word-break: break-word;
+    }
+
     @media screen and (max-width: 768px) {
+      body {
+        padding: 10px;
+      }
+      
+      h1 {
+        font-size: 1.8rem;
+      }
+      
+      /* Modified mobile table view */
+      .table-container {
+        overflow-x: hidden;
+      }
+      
+      table {
+        min-width: unset;
+        width: 100%;
+      }
+      
+      table thead {
+        display: none;
+      }
+      
+      table tbody tr {
+        display: block;
+        margin-bottom: 10px;
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+      }
+      
+      table tbody tr:hover {
+        background-color: var(--hover-color);
+      }
+      
+      table tbody td {
+        display: none;
+        border: none;
+      }
+      
+      table tbody td:first-child {
+        display: block;
+        font-weight: bold;
+        padding: 15px;
+        color: var(--primary-color);
+      }
+      
+      /* Hidden columns for mobile */
+      .mobile-hidden {
+        display: none;
+      }
+      
       .filter-group {
         min-width: 100%;
+      }
+      
+      /* Event row styling */
+      .event-row {
+        position: relative;
+      }
+      
+      .event-row::after {
+        content: "\f105"; /* FontAwesome arrow icon */
+        font-family: "Font Awesome 5 Free";
+        font-weight: 900;
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--primary-color);
       }
     }
   </style>
@@ -301,6 +412,14 @@
       
       <div class="search-container">
         <input type="text" id="searchInput" class="search-input" placeholder="Search events by name...">
+      </div>
+      
+      <div class="filter-row date-filter-row">
+        <div class="filter-group">
+          <label for="dateFilter">Filter by Date:</label>
+          <input type="date" id="dateFilter" class="date-input">
+        </div>
+        <button id="todayEventsBtn" class="today-btn">Today's Events</button>
       </div>
       
       <div class="filter-row">
@@ -329,12 +448,12 @@
         <thead>
           <tr>
             <th>Name</th>
-            <th class="description-column">Description</th>
-            <th>Start Time <button class="sort-btn" id="sortStartTime"><i class="fas fa-sort"></i></button></th>
-            <th>End Time <button class="sort-btn" id="sortEndTime"><i class="fas fa-sort"></i></button></th>
-            <th>Bodies</th>
-            <th>Venues</th>
-            <th>Website URL</th>
+            <th class="description-column mobile-hidden">Description</th>
+            <th class="mobile-hidden">Start Time <button class="sort-btn" id="sortStartTime"><i class="fas fa-sort"></i></button></th>
+            <th class="mobile-hidden">End Time <button class="sort-btn" id="sortEndTime"><i class="fas fa-sort"></i></button></th>
+            <th class="mobile-hidden">Bodies</th>
+            <th class="mobile-hidden">Venues</th>
+            <th class="mobile-hidden">Website URL</th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -353,6 +472,15 @@
       <div id="modalDescription" class="modal-body"></div>
     </div>
   </div>
+  
+  <!-- New modal for mobile event details -->
+  <div id="eventDetailsModal" class="modal event-details-modal">
+    <div class="modal-content">
+      <span class="close-btn">&times;</span>
+      <h3 class="modal-title" id="eventDetailsTitle">Event Details</h3>
+      <div id="eventDetailsContent" class="modal-body"></div>
+    </div>
+  </div>
 
   <script>
     // Store events data globally for sorting
@@ -361,6 +489,24 @@
       startTime: 'asc',
       endTime: 'asc'
     };
+
+    // Function to format date and time in a nicer way
+    function formatDateTime(dateString) {
+      const date = new Date(dateString);
+      const options = { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric',
+        hour: '2-digit', 
+        minute: '2-digit'
+      };
+      return date.toLocaleDateString(undefined, options);
+    }
+
+    // Function to check if the device is mobile
+    function isMobile() {
+      return window.innerWidth <= 768;
+    }
 
     // Function to render the table
     function renderTable(events) {
@@ -374,7 +520,11 @@
       } else {
         events.forEach(event => {
           const row = document.createElement("tr");
-
+          row.className = 'event-row';
+          
+          // Store all event data as attributes for mobile view
+          row.setAttribute('data-event', JSON.stringify(event));
+          
           // Extract body names
           const bodyNames = event.bodies.map(body => body.name).join(', ');
           
@@ -383,26 +533,36 @@
 
           row.innerHTML = `
             <td>${event.name}</td>
-            <td class="description-column" data-description="${escapeHtml(event.description)}" data-event-name="${escapeHtml(event.name)}"><p>${event.description}</p></td>
-            <td>${new Date(event.start_time).toLocaleString()}</td>
-            <td>${new Date(event.end_time).toLocaleString()}</td>
-            <td>${bodyNames}</td>
-            <td>${venueNames}</td>
-            <td>${event.website_url ? `<a href="${event.website_url}" target="_blank">${event.website_url}</a>` : '-'}</td>
+            <td class="description-column mobile-hidden" data-description="${escapeHtml(event.description)}" data-event-name="${escapeHtml(event.name)}"><p>${event.description}</p></td>
+            <td class="mobile-hidden">${formatDateTime(event.start_time)}</td>
+            <td class="mobile-hidden">${formatDateTime(event.end_time)}</td>
+            <td class="mobile-hidden">${bodyNames}</td>
+            <td class="mobile-hidden">${venueNames}</td>
+            <td class="mobile-hidden">${event.website_url ? `<a href="${event.website_url}" target="_blank">${event.website_url}</a>` : '-'}</td>
           `;
 
           tableBody.appendChild(row);
+          
+          // Add click event for mobile view
+          if (isMobile()) {
+            row.addEventListener('click', function() {
+              const eventData = JSON.parse(this.getAttribute('data-event'));
+              showEventDetailsModal(eventData);
+            });
+          }
         });
       }
       
-      // Add click event listeners to description cells
-      document.querySelectorAll('.description-column').forEach(cell => {
-        cell.addEventListener('click', function() {
-          const description = this.getAttribute('data-description');
-          const eventName = this.getAttribute('data-event-name');
-          showDescriptionModal(description, eventName);
+      // Add click event listeners to description cells (for desktop)
+      if (!isMobile()) {
+        document.querySelectorAll('.description-column').forEach(cell => {
+          cell.addEventListener('click', function() {
+            const description = this.getAttribute('data-description');
+            const eventName = this.getAttribute('data-event-name');
+            showDescriptionModal(description, eventName);
+          });
         });
-      });
+      }
       
       // Hide loading spinner after rendering
       document.getElementById('loading').style.display = 'none';
@@ -422,7 +582,7 @@
     function showDescriptionModal(description, eventName) {
       const modal = document.getElementById('descriptionModal');
       const modalContent = document.getElementById('modalDescription');
-      const modalTitle = document.querySelector('.modal-title');
+      const modalTitle = document.querySelector('#descriptionModal .modal-title');
       
       modalTitle.textContent = eventName || "Event Description";
       modalContent.innerHTML = description;
@@ -431,7 +591,64 @@
       modal.style.display = 'block';
       
       // Close modal when clicking the X
-      document.querySelector('.close-btn').addEventListener('click', function() {
+      document.querySelector('#descriptionModal .close-btn').addEventListener('click', function() {
+        modal.style.display = 'none';
+      });
+      
+      // Close modal when clicking outside the modal content
+      window.addEventListener('click', function(event) {
+        if (event.target === modal) {
+          modal.style.display = 'none';
+        }
+      });
+    }
+    
+    // Function to show event details modal for mobile view
+    function showEventDetailsModal(event) {
+      const modal = document.getElementById('eventDetailsModal');
+      const modalContent = document.getElementById('eventDetailsContent');
+      const modalTitle = document.getElementById('eventDetailsTitle');
+      
+      modalTitle.textContent = event.name;
+      
+      // Format all event details
+      const bodyNames = event.bodies.map(body => body.name).join(', ');
+      const venueNames = event.venues.map(venue => venue.name).join(', ');
+      
+      modalContent.innerHTML = `
+        <div class="detail-row">
+          <div class="detail-label">Description:</div>
+          <div class="detail-value">${event.description}</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">Start Time:</div>
+          <div class="detail-value">${formatDateTime(event.start_time)}</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">End Time:</div>
+          <div class="detail-value">${formatDateTime(event.end_time)}</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">Bodies:</div>
+          <div class="detail-value">${bodyNames}</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">Venues:</div>
+          <div class="detail-value">${venueNames}</div>
+        </div>
+        ${event.website_url ? `
+        <div class="detail-row">
+          <div class="detail-label">Website:</div>
+          <div class="detail-value"><a href="${event.website_url}" target="_blank">${event.website_url}</a></div>
+        </div>
+        ` : ''}
+      `;
+      
+      // Show the modal
+      modal.style.display = 'block';
+      
+      // Close modal when clicking the X
+      document.querySelector('#eventDetailsModal .close-btn').addEventListener('click', function() {
         modal.style.display = 'none';
       });
       
@@ -509,6 +726,7 @@
       const venueFilter = document.getElementById('venueFilter').value;
       const bodyFilter = document.getElementById('bodyFilter').value;
       const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+      const dateFilter = document.getElementById('dateFilter').value;
       
       return eventsData.filter(event => {
         // Check if event matches venue filter
@@ -523,7 +741,26 @@
         const matchesSearch = !searchTerm || 
           event.name.toLowerCase().includes(searchTerm);
         
-        return matchesVenue && matchesBody && matchesSearch;
+        // Check if event occurs on the selected date
+        let matchesDate = true;
+        if (dateFilter) {
+          const filterDate = new Date(dateFilter);
+          // Set to beginning of the day
+          filterDate.setHours(0, 0, 0, 0);
+          
+          // Get end of the day
+          const filterDateEnd = new Date(filterDate);
+          filterDateEnd.setHours(23, 59, 59, 999);
+          
+          const eventStart = new Date(event.start_time);
+          const eventEnd = new Date(event.end_time);
+          
+          // Check if event occurs on the selected date
+          // (starts before end of day AND ends after start of day)
+          matchesDate = eventStart <= filterDateEnd && eventEnd >= filterDate;
+        }
+        
+        return matchesVenue && matchesBody && matchesSearch && matchesDate;
       });
     }
 
@@ -532,6 +769,8 @@
       const venueFilter = document.getElementById('venueFilter');
       const bodyFilter = document.getElementById('bodyFilter');
       const searchInput = document.getElementById('searchInput');
+      const dateFilter = document.getElementById('dateFilter');
+      const todayBtn = document.getElementById('todayEventsBtn');
       const resetButton = document.getElementById('resetFilters');
       
       venueFilter.addEventListener('change', () => {
@@ -546,11 +785,32 @@
         renderTable(applyFilters());
       });
       
+      dateFilter.addEventListener('change', () => {
+        renderTable(applyFilters());
+      });
+      
+      todayBtn.addEventListener('click', () => {
+        // Set the date input to today's date
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        
+        dateFilter.value = `${year}-${month}-${day}`;
+        renderTable(applyFilters());
+      });
+      
       resetButton.addEventListener('click', () => {
         venueFilter.value = '';
         bodyFilter.value = '';
         searchInput.value = '';
+        dateFilter.value = '';
         renderTable(eventsData);
+      });
+      
+      // Add window resize handler to re-render on viewport change
+      window.addEventListener('resize', () => {
+        renderTable(applyFilters());
       });
     }
 
