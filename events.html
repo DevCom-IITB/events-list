@@ -119,6 +119,12 @@
       animation: spin 1s linear infinite;
     }
     
+    .loading-message {
+      margin-left: 15px;
+      color: var(--primary-color);
+      font-weight: 500;
+    }
+    
     @keyframes spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
@@ -441,6 +447,7 @@
     
     <div id="loading" class="loading-container">
       <div class="spinner"></div>
+      <p class="loading-message">This might take a minute</p>
     </div>
     
     <div class="table-container">
@@ -801,11 +808,17 @@
       });
       
       resetButton.addEventListener('click', () => {
-        venueFilter.value = '';
-        bodyFilter.value = '';
-        searchInput.value = '';
-        dateFilter.value = '';
-        renderTable(eventsData);
+        // Show loading spinner while resetting
+        document.getElementById('loading').style.display = 'flex';
+        
+        // Use setTimeout to allow the UI to update before processing
+        setTimeout(() => {
+          venueFilter.value = '';
+          bodyFilter.value = '';
+          searchInput.value = '';
+          dateFilter.value = '';
+          renderTable(eventsData);
+        }, 10);
       });
       
       // Add window resize handler to re-render on viewport change
